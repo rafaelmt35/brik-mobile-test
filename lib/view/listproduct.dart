@@ -1,9 +1,7 @@
-// ignore_for_file: library_private_types_in_public_api
-
-import 'package:brik_mobile_test/controller/mockData.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../controller/product_controller.dart';
+import '../model/product_model.dart';
 import 'addproduct.dart';
 import 'details.dart';
 
@@ -18,11 +16,21 @@ class _ListProductPageState extends State<ListProductPage> {
   int currentPage = 1;
   final int limit = 8; // limit products in list
   bool hasMoreData = true;
+  final TextEditingController _searchController = TextEditingController();
+  String searchQuery = '';
+  List<Product> allProducts = [];
+  List<Product> filteredProducts = [];
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
+    _searchController.addListener(() {
+      setState(() {
+        searchQuery = _searchController.text;
+        filteredProducts = _filterProducts(allProducts, searchQuery);
+      });
+    });
   }
 
   void _loadProducts() {
@@ -48,16 +56,28 @@ class _ListProductPageState extends State<ListProductPage> {
     }
   }
 
+  List<Product> _filterProducts(List<Product> products, String query) {
+    if (query.isEmpty) {
+      return products;
+    }
+    final lowerQuery = query.toLowerCase();
+    return products.where((product) {
+      final nameMatch = product.name.toLowerCase().contains(lowerQuery);
+      final categoryMatch =
+          product.categoryName.toLowerCase().contains(lowerQuery);
+      return nameMatch || categoryMatch;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.amberAccent,
         title: const Text('List Products'),
         actions: [
           IconButton(
             onPressed: () {
-              // MockDataInput mockData = MockDataInput();
-              // mockData.postMockData();
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => AddProductPage()),
@@ -73,6 +93,8 @@ class _ListProductPageState extends State<ListProductPage> {
             return const Center(child: CircularProgressIndicator());
           } else if (state is ProductLoaded) {
             final products = state.products;
+            allProducts = products; // Store the complete list
+            filteredProducts = _filterProducts(allProducts, searchQuery);
             hasMoreData = products.length == limit;
 
             return RefreshIndicator(
@@ -84,11 +106,25 @@ class _ListProductPageState extends State<ListProductPage> {
               },
               child: Column(
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        focusColor: Colors.amber,
+                        labelText: 'Search Products by Name or Category',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        suffixIcon: const Icon(Icons.search),
+                      ),
+                    ),
+                  ),
                   Expanded(
                     child: ListView.builder(
-                      itemCount: products.length,
+                      itemCount: filteredProducts.length,
                       itemBuilder: (context, index) {
-                        final product = products[index];
+                        final product = filteredProducts[index];
                         return ListTile(
                           onTap: () {
                             Navigator.push(
@@ -112,27 +148,27 @@ class _ListProductPageState extends State<ListProductPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Visibility(
-                          visible: currentPage == 1 ? false : true,
+                          visible: currentPage > 1,
                           child: ElevatedButton(
+                            onPressed: _goToPreviousPage,
                             style: ButtonStyle(
                               backgroundColor:
-                                  WidgetStateProperty.resolveWith<Color>(
-                                (Set<WidgetState> states) {
-                                  if (states.contains(WidgetState.pressed)) {
+                                  MaterialStateProperty.resolveWith<Color>(
+                                (Set<MaterialState> states) {
+                                  if (states.contains(MaterialState.pressed)) {
                                     return Colors.orange;
                                   }
                                   return Colors.amberAccent;
                                 },
                               ),
                               foregroundColor:
-                                  WidgetStateProperty.all(Colors.white),
-                              shape: WidgetStateProperty.all(
+                                  MaterialStateProperty.all(Colors.white),
+                              shape: MaterialStateProperty.all(
                                 RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24.0),
                                 ),
                               ),
                             ),
-                            onPressed: _goToPreviousPage,
                             child: const Text(
                               'Previous Page',
                               style: TextStyle(color: Colors.black),
@@ -145,17 +181,17 @@ class _ListProductPageState extends State<ListProductPage> {
                             onPressed: _goToNextPage,
                             style: ButtonStyle(
                               backgroundColor:
-                                  WidgetStateProperty.resolveWith<Color>(
-                                (Set<WidgetState> states) {
-                                  if (states.contains(WidgetState.pressed)) {
+                                  MaterialStateProperty.resolveWith<Color>(
+                                (Set<MaterialState> states) {
+                                  if (states.contains(MaterialState.pressed)) {
                                     return Colors.orange;
                                   }
                                   return Colors.amberAccent;
                                 },
                               ),
                               foregroundColor:
-                                  WidgetStateProperty.all(Colors.white),
-                              shape: WidgetStateProperty.all(
+                                  MaterialStateProperty.all(Colors.white),
+                              shape: MaterialStateProperty.all(
                                 RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24.0),
                                 ),
